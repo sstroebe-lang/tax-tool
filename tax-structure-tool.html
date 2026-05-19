@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>After-Tax Wealth Accumulation: Pass-Through vs. C-Corp</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #252b3b;
+    --border2: #2e3650;
+    --pt-color: #4ade80;
+    --pt-dim: #1a4a2e;
+    --cc-color: #60a5fa;
+    --cc-dim: #1a2e4a;
+    --neutral: #94a3b8;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --accent: #f59e0b;
+    --red: #f87171;
+    --serif: 'DM Serif Display', serif;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 32px;
+    background: linear-gradient(180deg, #0a0c10 0%, var(--bg) 100%);
+  }
+  .header-title h1 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    color: #f1f5f9;
+  }
+  .header-title p {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .header-badges {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    align-items: center;
+  }
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .badge-pt { background: var(--pt-dim); color: var(--pt-color); border: 1px solid #2d6b45; }
+  .badge-cc { background: var(--cc-dim); color: var(--cc-color); border: 1px solid #2d4d6b; }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge-pt .badge-dot { background: var(--pt-color); }
+  .badge-cc .badge-dot { background: var(--cc-color); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 89px);
+  }
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px;
+    overflow-y: auto;
+    background: var(--surface);
+  }
+  .main {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  /* SECTION HEADINGS */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section { margin-bottom: 28px; }
+
+  /* INPUTS */
+  .input-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+  }
+  .input-label {
+    font-size: 12.5px;
+    color: var(--neutral);
+    flex: 1;
+    white-space: nowrap;
+  }
+  .input-label small {
+    display: block;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+  .input-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    min-width: 54px;
+    text-align: right;
+  }
+  .slider-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; }
+  .slider-label { font-size: 12.5px; color: var(--neutral); }
+  .slider-val { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+    transition: box-shadow 0.15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(245,158,11,0.3); }
+  input[type=number] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 90px;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=number]:focus { border-color: var(--accent); }
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* ALLOCATION */
+  .alloc-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .alloc-name { font-size: 12px; color: var(--neutral); }
+  .alloc-input {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-align: right;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .alloc-input:focus { border-color: var(--accent); }
+  .alloc-total {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 4px;
+    border: 1px solid var(--border2);
+    transition: all 0.2s;
+  }
+  .alloc-total.ok { background: rgba(74,222,128,0.08); color: var(--pt-color); border-color: var(--pt-dim); }
+  .alloc-total.err { background: rgba(248,113,113,0.08); color: var(--red); border-color: rgba(248,113,113,0.3); }
+  .alloc-header { font-size: 10px; color: var(--text-dim); font-family: var(--mono); text-align: right; padding: 0 2px 4px; }
+
+  /* RETURN RATES */
+  .return-grid { display: grid; grid-template-columns: 1fr 68px 68px; gap: 6px; align-items: center; }
+  .return-header { font-size: 10px; color: var(--text-dim); font-family: var(--mono); text-align: right; padding: 2px; }
+  .return-name { font-size: 12px; color: var(--neutral); padding: 4px 0; }
+
+  /* CARDS */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .card-pt::before { background: var(--pt-color); }
+  .card-cc::before { background: var(--cc-color); }
+  .card-neutral::before { background: var(--accent); }
+  .card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .card-value {
+    font-family: var(--serif);
+    font-size: 26px;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .card-pt .card-value { color: var(--pt-color); }
+  .card-cc .card-value { color: var(--cc-color); }
+  .card-neutral .card-value { color: var(--accent); }
+  .card-sub { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+
+  /* WINNER BANNER */
+  .winner-banner {
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-family: var(--mono);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .winner-banner.pt { background: rgba(74,222,128,0.07); border: 1px solid #2d6b45; color: var(--pt-color); }
+  .winner-banner.cc { background: rgba(96,165,250,0.07); border: 1px solid #2d4d6b; color: var(--cc-color); }
+  .winner-banner.tie { background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.3); color: var(--accent); }
+  .winner-icon { font-size: 14px; }
+
+  /* TABLE */
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-bottom: 28px;
+  }
+  .results-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    padding: 8px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .results-table th:first-child { text-align: left; }
+  .results-table td {
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+  .results-table td:first-child { text-align: left; color: var(--neutral); font-family: var(--sans); }
+  .results-table tr:last-child td { border-bottom: none; font-weight: 500; }
+  .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .val-pt { color: var(--pt-color); }
+  .val-cc { color: var(--cc-color); }
+  .val-pos { color: var(--pt-color); }
+  .val-neg { color: var(--red); }
+  .val-winner { font-weight: 600; }
+
+  /* CHART */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .chart-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+  canvas { max-height: 300px; }
+
+  /* VALIDATION SECTION */
+  .validation-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 8px;
+  }
+  .validation-row {
+    display: grid;
+    grid-template-columns: 140px repeat(4, 1fr);
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .validation-row:last-child { border-bottom: none; }
+  .validation-head { color: var(--text-dim); font-size: 10px; }
+  .val-match { color: var(--pt-color); }
+  .val-close { color: var(--accent); }
+
+  /* SCROLL TRACK */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    background: none;
+    border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* INFO TOOLTIP */
+  .info { cursor: help; opacity: 0.5; font-size: 11px; }
+
+  .jur-btn {
+    flex:1; padding:6px 8px; font-family:var(--mono); font-size:10px;
+    text-transform:uppercase; letter-spacing:0.5px;
+    background:var(--surface2); border:1px solid var(--border2); color:var(--text-dim);
+    border-radius:4px; cursor:pointer; transition:all 0.15s;
+  }
+  .jur-btn.active { background:rgba(245,158,11,0.1); border-color:var(--accent); color:var(--accent); }
+  .intl-btn {
+    flex:1; padding:8px 10px; font-family:var(--sans); font-size:12px;
+    background:var(--surface2); border:1px solid var(--border2); color:var(--text-dim);
+    border-radius:4px; cursor:pointer; transition:all 0.15s;
+  }
+  .intl-btn.active { background:rgba(96,165,250,0.08); border-color:var(--cc-color); color:var(--cc-color); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 20px 20px 16px; flex-wrap: wrap; }
+    .main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <h1>After-Tax Wealth Accumulation</h1>
+    <p>Pass-Through vs. C-Corp · All Taxes, All Parties, All Costs</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-pt"><span class="badge-dot"></span>Pass-Through / Personal</span>
+    <span class="badge badge-cc"><span class="badge-dot"></span>C-Corporation</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR: INPUTS -->
+  <div class="sidebar">
+
+    <!-- Jurisdiction -->
+    <div class="sidebar-section">
+      <div class="section-label">Jurisdiction</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button id="btnDomestic" class="jur-btn active" onclick="setJurMode('domestic')">U.S. Domestic</button>
+        <button id="btnIntl" class="jur-btn" onclick="setJurMode('international')">International</button>
+      </div>
+      <div id="jurDomestic">
+        <select id="stateSelect" onchange="onStateChange()"></select>
+      </div>
+      <div id="jurIntl" style="display:none;">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button id="btnHK" class="intl-btn active" onclick="setIntlJur('HK')">🇭🇰 Hong Kong</button>
+          <button id="btnSG" class="intl-btn" onclick="setIntlJur('SG')">🇸🇬 Singapore</button>
+        </div>
+        <div style="font-size:10px;color:var(--accent);font-family:var(--mono);padding:8px 10px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:4px;line-height:1.5;">
+          Models a U.S. person with a foreign entity. U.S. federal rates are reduced by the foreign rate (FTC offset); foreign rate applied as state component. Net: 37% ordinary, 20% cap gains, 21% corporate — same totals as domestic, split across U.S. and foreign layers.
+        </div>
+      </div>
+    </div>
+
+    <!-- Capital & Horizon -->
+    <div class="sidebar-section">
+      <div class="section-label">Core Assumptions</div>
+      <div class="slider-wrap">
+        <div class="slider-header">
+          <span class="slider-label">Initial Capital</span>
+          <span class="slider-val" id="capitalVal">$10,000,000</span>
+        </div>
+        <input type="range" id="capitalSlider" min="500000" max="50000000" step="500000" value="10000000" oninput="updateCapital()">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-header">
+          <span class="slider-label">Time Horizon</span>
+          <span class="slider-val" id="horizonVal">30 years</span>
+        </div>
+        <input type="range" id="horizonSlider" min="1" max="40" step="1" value="30" oninput="updateHorizon()">
+      </div>
+    </div>
+
+    <!-- Federal Tax Rates (read-only display, sourced from state dropdown) -->
+    <div class="sidebar-section">
+      <div class="section-label" id="fedRateLabel">Federal Tax Rates</div>
+      <div class="input-row">
+        <span class="input-label">Ordinary Income<small>Top federal bracket</small></span>
+        <span class="input-value" id="fedOrdDisplay">37.0%</span>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Long-Term Cap Gains<small>+ NIIT if applicable</small></span>
+        <span class="input-value" id="fedCgDisplay">20.0%</span>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Corporate Rate</span>
+        <span class="input-value" id="fedCorpDisplay">21.0%</span>
+      </div>
+    </div>
+
+    <!-- State Tax Rates -->
+    <div class="sidebar-section">
+      <div class="section-label">State Tax Rates <span class="info" title="Auto-populated from state selection. Override if needed.">ⓘ</span></div>
+      <div id="stateTaxSection" style="display:contents">
+      <div class="input-row">
+        <span class="input-label">Ordinary Income</span>
+        <input type="number" id="stateOrd" value="0" min="0" max="0.20" step="0.001" onchange="recalcAll()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Long-Term Cap Gains</span>
+        <input type="number" id="stateCg" value="0" min="0" max="0.20" step="0.001" onchange="recalcAll()">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Corporate</span>
+        <input type="number" id="stateCorp" style="display:block" value="0" min="0" max="0.15" step="0.001" onchange="recalcAll()">
+      </div>
+    </div>
+
+    <!-- Asset Allocation -->
+    <div class="sidebar-section">
+      <div class="section-label">Asset Allocation</div>
+      <div class="return-grid" style="margin-bottom:6px;">
+        <div></div>
+        <div class="alloc-header">Alloc %</div>
+        <div class="alloc-header">Value $</div>
+      </div>
+      <div id="allocRows"></div>
+      <div id="allocTotal" class="alloc-total ok">Total: 100.0%</div>
+    </div>
+
+    <!-- Return Assumptions -->
+    <div class="sidebar-section">
+      <div class="section-label">Return Assumptions</div>
+      <div class="return-grid" style="margin-bottom:6px;">
+        <div></div>
+        <div class="return-header">Income %</div>
+        <div class="return-header">Growth %</div>
+      </div>
+      <div id="returnRows"></div>
+    </div>
+
+  </div>
+
+  <!-- MAIN: OUTPUTS -->
+  <div class="main">
+
+    <!-- Summary Cards -->
+    <div class="cards-grid">
+      <div class="card card-pt">
+        <div class="card-label">Pass-Through · After-Tax Value</div>
+        <div class="card-value" id="ptTotalVal">—</div>
+        <div class="card-sub" id="ptTotalSub">After liquidation</div>
+      </div>
+      <div class="card card-cc">
+        <div class="card-label">C-Corp · After-Tax Value</div>
+        <div class="card-value" id="ccTotalVal">—</div>
+        <div class="card-sub" id="ccTotalSub">After liquidation</div>
+      </div>
+      <div class="card card-neutral">
+        <div class="card-label">Advantage</div>
+        <div class="card-value" id="advantageVal">—</div>
+        <div class="card-sub" id="advantageSub">Δ in after-tax wealth</div>
+      </div>
+    </div>
+
+    <div id="winnerBanner" class="winner-banner tie">
+      <span class="winner-icon">⚖️</span>
+      <span id="winnerText">Loading…</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('chart')">Wealth Over Time</button>
+      <button class="tab" onclick="switchTab('table')">Asset Detail</button>
+      <button class="tab" onclick="switchTab('returns')">Return Matrix</button>
+      <button class="tab" onclick="switchTab('validation')">Validation</button>
+    </div>
+
+    <!-- Chart Panel -->
+    <div id="tab-chart" class="tab-panel active">
+      <div class="chart-container">
+        <div class="chart-title">After-Tax Liquidation Value — Portfolio Total</div>
+        <canvas id="wealthChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <div class="chart-title">Relative Advantage (Pass-Through minus C-Corp)</div>
+        <canvas id="diffChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Asset Detail Table -->
+    <div id="tab-table" class="tab-panel">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Asset Class</th>
+            <th>Initial $</th>
+            <th>PT Liq. Value</th>
+            <th>CC Liq. Value</th>
+            <th>PT Ann. Return</th>
+            <th>CC Ann. Return</th>
+            <th>Δ (PT − CC)</th>
+            <th>Winner</th>
+          </tr>
+        </thead>
+        <tbody id="detailTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Return Matrix -->
+    <div id="tab-returns" class="tab-panel">
+      <div class="chart-container" style="overflow-x:auto;">
+        <div class="chart-title">Annualized After-Tax Return Matrix</div>
+        <table class="results-table" id="returnMatrix" style="min-width:500px;">
+          <thead>
+            <tr>
+              <th>Asset Class</th>
+              <th>Pre-Tax Return</th>
+              <th>PT After-Tax</th>
+              <th>CC After-Tax</th>
+              <th>Tax Drag (PT)</th>
+              <th>Tax Drag (CC)</th>
+            </tr>
+          </thead>
+          <tbody id="returnMatrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Validation Panel -->
+    <div id="tab-validation" class="tab-panel">
+      <div class="validation-box">
+        <div class="section-label" style="margin-bottom:12px;">Excel vs. Web Tool Validation (TX, $10M, 30yr, default assumptions)</div>
+        <div class="validation-row validation-head">
+          <span>Asset</span>
+          <span>Excel PT ($)</span>
+          <span>Tool PT ($)</span>
+          <span>Excel CC ($)</span>
+          <span>Tool CC ($)</span>
+        </div>
+        <div id="validationRows"></div>
+      </div>
+      <p style="font-size:11px; color:var(--text-dim); margin-top:12px; font-family:var(--mono);">
+        * Validation uses Excel baseline: TX state (0% all rates), $10M capital, 30-year horizon, default return assumptions. 
+        Tolerance &lt;0.1% considered exact match. Small floating-point differences expected.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE DATA (from Excel 'Data' sheet)
+// ============================================================
+const STATE_DATA = {
+  "TX":{"ord":0,"cg":0,"corp":0},
+  "AL":{"ord":0.05,"cg":0.05,"corp":0.065},
+  "AK":{"ord":0,"cg":0,"corp":0.094},
+  "AZ":{"ord":0.025,"cg":0.025,"corp":0.049},
+  "AR":{"ord":0.044,"cg":0.044,"corp":0.048},
+  "CA":{"ord":0.133,"cg":0.133,"corp":0.088},
+  "CO":{"ord":0.044,"cg":0.044,"corp":0.044},
+  "CT":{"ord":0.0699,"cg":0.0699,"corp":0.075},
+  "DE":{"ord":0.066,"cg":0.066,"corp":0.087},
+  "FL":{"ord":0,"cg":0,"corp":0.055},
+  "GA":{"ord":0.0549,"cg":0.0549,"corp":0.0575},
+  "HI":{"ord":0.11,"cg":0.0725,"corp":0.044},
+  "ID":{"ord":0.058,"cg":0.058,"corp":0.058},
+  "IL":{"ord":0.0495,"cg":0.0495,"corp":0.095},
+  "IN":{"ord":0.0305,"cg":0.0305,"corp":0.049},
+  "IA":{"ord":0.06,"cg":0.06,"corp":0.071},
+  "KS":{"ord":0.057,"cg":0.057,"corp":0.04},
+  "KY":{"ord":0.04,"cg":0.04,"corp":0.05},
+  "LA":{"ord":0.03,"cg":0.03,"corp":0.055},
+  "ME":{"ord":0.0715,"cg":0.05,"corp":0.0893},
+  "MD":{"ord":0.0575,"cg":0.0575,"corp":0.0825},
+  "MA":{"ord":0.05,"cg":0.085,"corp":0.08},
+  "MI":{"ord":0.0425,"cg":0.0425,"corp":0.06},
+  "MN":{"ord":0.0985,"cg":0.0985,"corp":0.098},
+  "MS":{"ord":0.05,"cg":0.05,"corp":0.05},
+  "MO":{"ord":0.048,"cg":0.048,"corp":0.04},
+  "MT":{"ord":0.0675,"cg":0.041,"corp":0.0675},
+  "NE":{"ord":0.0584,"cg":0.0584,"corp":0.0584},
+  "NV":{"ord":0,"cg":0,"corp":0},
+  "NH":{"ord":0,"cg":0,"corp":0.075},
+  "NJ":{"ord":0.1075,"cg":0.1075,"corp":0.09},
+  "NM":{"ord":0.059,"cg":0.059,"corp":0.059},
+  "NY":{"ord":0.109,"cg":0.109,"corp":0.0725},
+  "NC":{"ord":0.0475,"cg":0.0475,"corp":0.025},
+  "ND":{"ord":0.025,"cg":0.025,"corp":0.0431},
+  "OH":{"ord":0.0375,"cg":0.0375,"corp":0},
+  "OK":{"ord":0.0475,"cg":0.0475,"corp":0.04},
+  "OR":{"ord":0.099,"cg":0.099,"corp":0.076},
+  "PA":{"ord":0.0307,"cg":0.0307,"corp":0.0899},
+  "RI":{"ord":0.0599,"cg":0.0599,"corp":0.07},
+  "SC":{"ord":0.064,"cg":0.064,"corp":0.05},
+  "SD":{"ord":0,"cg":0,"corp":0},
+  "TN":{"ord":0,"cg":0,"corp":0.065},
+  "UT":{"ord":0.0465,"cg":0.0465,"corp":0.0465},
+  "VT":{"ord":0.0875,"cg":0.0875,"corp":0.085},
+  "VA":{"ord":0.0575,"cg":0.0575,"corp":0.06},
+  "WA":{"ord":0,"cg":0.07,"corp":0},
+  "WV":{"ord":0.065,"cg":0.065,"corp":0.065},
+  "WI":{"ord":0.0765,"cg":0.0765,"corp":0.079},
+  "WY":{"ord":0,"cg":0,"corp":0},
+  "DC":{"ord":0.1075,"cg":0.1075,"corp":0.0825},
+  "HK":{"ord":0.16,"cg":0.0,"corp":0.165},
+  "SG":{"ord":0.24,"cg":0.0,"corp":0.17},
+};
+
+// ============================================================
+// ASSET CLASSES (from Excel 'Asset Choices' sheet)
+// Columns: income rate, growth rate
+// ============================================================
+const ASSET_CLASSES = [
+  { id:"re_growth",   name:"Real-Estate (Growth)", income:0.01,  growth:0.05, defaultAlloc:0.15 },
+  { id:"re_income",   name:"Real-Estate (Income)", income:0.05,  growth:0.02, defaultAlloc:0.15 },
+  { id:"pub_eq",      name:"Public Equities",      income:0.005, growth:0.07, defaultAlloc:0.25 },
+  { id:"priv_eq",     name:"Private Equities",     income:0.00,  growth:0.10, defaultAlloc:0.15 },
+  { id:"fed_bonds",   name:"Federal Bonds",        income:0.05,  growth:0.00, defaultAlloc:0.15 },
+  { id:"munis",       name:"Munis",                income:0.03,  growth:0.00, defaultAlloc:0.15 },
+];
+
+// Federal rates (fixed per Excel 'Control Panel')
+const FED = { ord: 0.37, cg: 0.20, corp: 0.21 };
+
+// Non-US jurisdictions — Excel Control Panel formulas (faithful replication):
+// B6 (fed ord)  = 0.37 - foreign_ord   → e.g. HK: 0.37-0.16 = 0.21
+// B7 (fed cg)   = 0.20 - foreign_cg    → e.g. HK: 0.20-0.00 = 0.20
+// B8 (fed corp) = 0.21 - foreign_corp  → e.g. HK: 0.21-0.165= 0.045
+// B9  (state ord)  = XLOOKUP → foreign_ord   (e.g. HK: 0.16)
+// B10 (state cg)   = XLOOKUP → foreign_cg    (e.g. HK: 0.00)
+// B11 (state corp) = XLOOKUP → foreign_corp  (e.g. HK: 0.165)
+// Net totals: ord=37%, cg=20%, corp=21% — same as domestic US
+// This models a US person with foreign entity: US rates apply,
+// foreign taxes treated as state-level component (FTC offset concept)
+const NON_US = {
+  "HK": { ord: 0.16, cg: 0.00, corp: 0.165, label: "Hong Kong" },
+  "SG": { ord: 0.24, cg: 0.00, corp: 0.17,  label: "Singapore"  },
+};
+
+// App state
+let state = {
+  capital: 10000000,
+  horizon: 30,
+  stateOrd: 0, stateCg: 0, stateCorp: 0,
+  allocs: ASSET_CLASSES.map(a => a.defaultAlloc),
+  incomes: ASSET_CLASSES.map(a => a.income),
+  growths: ASSET_CLASSES.map(a => a.growth),
+  jurMode: 'domestic',
+  intlJur: 'HK',
+};
+
+let wealthChart = null, diffChart = null;
+
+// ============================================================
+// EXCEL FORMULA TRANSLATIONS
+// ============================================================
+
+/**
+ * PASS-THROUGH per asset, per year
+ * Source: Excel 'PersonalPassthrough' sheet, columns B–K
+ * 
+ * Year 1 seed: initialValue = capital * alloc
+ * 
+ * Each year:
+ *   incomeDiv    = initialValue * incomeRate                     [Excel col C: =B*Income]
+ *   fedOrdTax    = incomeDiv * fedOrd                            [Excel col D: =C*ControlPanel.B6]
+ *   stateOrdTax  = incomeDiv * stateOrd                          [Excel col E: =C*ControlPanel.B9]
+ *   netIncome    = incomeDiv - fedOrdTax - stateOrdTax           [Excel col F: =C-D-E]
+ *   cumIncome    = cumulative sum of netIncome                   [Excel col G]
+ *   capitalGain  = initialValue * growthRate                     [Excel col H: =B*Growth]
+ *   finalValue   = initialValue + capitalGain + netIncome        [Excel col I: =B+H+F]
+ *   basis        = seed + cumIncome                              [Excel col J: =B$3+G (seed is row 3)]
+ *   liqValue     = basis + (finalValue - basis)*(1 - fedCg - stateCg)  [Excel col K]
+ * 
+ * Special case - Munis: fedOrdTax = 0, stateOrdTax = 0 (tax-exempt income)
+ *   [Excel col BL,BM = 0 for munis in PersonalPassthrough]
+ *   growth = 0 for munis, liqValue = finalValue (no capital gain to tax)
+ *   [Excel col BS = BQ for munis — no liquidation discount applied]
+ */
+function calcPassThrough(assetIdx, capital, alloc, incomeRate, growthRate, horizon, fedOrd, fedCg, stateOrd, stateCg) {
+  const isMuni = assetIdx === 5;
+  const initialValue = capital * alloc;
+  let val = initialValue;
+  let cumIncome = 0;
+  const yearlyLiq = [];
+
+  for (let y = 1; y <= horizon; y++) {
+    const incomeDiv = val * incomeRate;
+    let fedOrdTax, stateOrdTax;
+    if (isMuni) {
+      // Excel: Munis BL3=0, BM3=0 — no ordinary tax on muni income
+      fedOrdTax = 0;
+      stateOrdTax = 0;
+    } else {
+      fedOrdTax = incomeDiv * fedOrd;
+      stateOrdTax = incomeDiv * stateOrd;
+    }
+    const netIncome = incomeDiv - fedOrdTax - stateOrdTax;
+    cumIncome += netIncome;
+    const capitalGain = val * growthRate;
+    const finalValue = val + capitalGain + netIncome;
+    const basis = initialValue + cumIncome;
+
+    let liqValue;
+    if (isMuni) {
+      // Excel: BS = BQ (finalValue = liqValue, no cap gains tax on zero-growth muni)
+      liqValue = finalValue;
+    } else {
+      liqValue = basis + (finalValue - basis) * (1 - fedCg - stateCg);
+    }
+
+    yearlyLiq.push(liqValue);
+    val = finalValue;
+  }
+  return { liqValue: yearlyLiq[yearlyLiq.length - 1], yearlyLiq, initial: initialValue };
+}
+
+/**
+ * C-CORP per asset, per year
+ * Source: Excel 'C-Corp' sheet, columns B–L
+ * 
+ * Two-layer tax:
+ *   Layer 1 (entity): income taxed at corp rate
+ *   Layer 2 (shareholder): unrealized gain taxed at personal cap gains on liquidation
+ * 
+ * Each year:
+ *   incomeDiv    = initialValue * incomeRate                     [Excel col C]
+ *   fedCorpTax   = incomeDiv * fedCorp                           [Excel col D: =C*ControlPanel.B8]
+ *   stateCorpTax = incomeDiv * stateCorp                         [Excel col E: =C*ControlPanel.B11]
+ *   netIncome    = incomeDiv - fedCorpTax - stateCorpTax         [Excel col F]
+ *   cumIncome    = cumulative net income                         [Excel col G]
+ *   capitalGain  = initialValue * growthRate                     [Excel col H]
+ *   finalValue   = initialValue + capitalGain + netIncome        [Excel col I]
+ *   insideBasis  = seed + cumIncome                              [Excel col J: =B$3+G]
+ *   insideLiqVal = insideBasis + (finalValue-insideBasis)*(1-fedCorp-stateCorp)  [Excel col K]
+ *   liqValue     = seed + (insideLiqVal - seed)*(1 - fedCg - stateCg)           [Excel col L]
+ *     → This applies SECOND layer: personal cap gains on the corp's after-corp-tax appreciation
+ * 
+ * Special case - Munis in C-Corp: MUNIS LOSE TAX EXEMPTION INSIDE A C-CORP.
+ *   Excel confirms: C-Corp Munis income IS taxed at corporate rate (BQ3 uses B8=fedCorp)
+ *   This is the key policy insight: municipal bond tax exemption is a personal-level benefit.
+ *   A C-Corp holding munis pays full corporate tax on the interest income.
+ *   Two-layer tax applies: corp income tax + personal cap gains on liquidation.
+ *   Excel output: CC Munis = $2,723,050 (vs PT = $3,640,894) — a large disadvantage.
+ */
+function calcCCorp(assetIdx, capital, alloc, incomeRate, growthRate, horizon, fedOrd, fedCg, fedCorp, stateOrd, stateCg, stateCorp) {
+  const initialValue = capital * alloc;
+  let val = initialValue;
+  let cumIncome = 0;
+  const yearlyLiq = [];
+
+  for (let y = 1; y <= horizon; y++) {
+    const incomeDiv = val * incomeRate;
+    // NOTE: Unlike pass-through, munis inside C-Corp ARE taxed at corp rate
+    // Excel confirms this is the correct treatment (BQ/BR columns use corp rates for all assets)
+    let fedCorpTax, stateCorpTax;
+    {
+      fedCorpTax = incomeDiv * fedCorp;
+      stateCorpTax = incomeDiv * stateCorp;
+    }
+    const netIncome = incomeDiv - fedCorpTax - stateCorpTax;
+    cumIncome += netIncome;
+    const capitalGain = val * growthRate;
+    const finalValue = val + capitalGain + netIncome;
+    const insideBasis = initialValue + cumIncome;
+    const insideLiqVal = insideBasis + (finalValue - insideBasis) * (1 - fedCorp - stateCorp);
+    const liqValue = initialValue + (insideLiqVal - initialValue) * (1 - fedCg - stateCg);
+    yearlyLiq.push(liqValue);
+    val = finalValue;
+  }
+  return { liqValue: yearlyLiq[yearlyLiq.length - 1], yearlyLiq, initial: initialValue };
+}
+
+/**
+ * Annualized return from Excel 'Output' sheet:
+ * r = (totalGain + 1)^(1/horizon) - 1
+ * where totalGain = (liqValue / initialValue) - 1
+ * Source: Excel Output!J3 = (G3+1)^(1/ControlPanel.B13)-1
+ */
+function annualizedReturn(liqValue, initial, horizon) {
+  return Math.pow(liqValue / initial, 1 / horizon) - 1;
+}
+
+// ============================================================
+// MAIN CALCULATION ENGINE
+// ============================================================
+function recalcAll() {
+  const { capital, horizon, allocs, incomes, growths } = state;
+  // Jurisdiction-aware rate resolution — faithfully replicates Excel Control Panel formulas
+  // For HK/SG (Excel B6-B11 logic):
+  //   fedOrd  = 0.37 - foreign_ord   (e.g. HK: 0.21, SG: 0.13)
+  //   fedCg   = 0.20 - foreign_cg    (e.g. HK: 0.20, SG: 0.20)
+  //   fedCorp = 0.21 - foreign_corp  (e.g. HK: 0.045, SG: 0.04)
+  //   stateOrd  = foreign_ord        (e.g. HK: 0.16, SG: 0.24)
+  //   stateCg   = foreign_cg         (e.g. HK: 0.00, SG: 0.00)
+  //   stateCorp = foreign_corp       (e.g. HK: 0.165, SG: 0.17)
+  // Net totals remain: ord=37%, cg=20%, corp=21%
+  let fedOrd, fedCg, fedCorp, stateOrd, stateCg, stateCorp;
+  if (state.jurMode === 'international' && NON_US[state.intlJur]) {
+    const j = NON_US[state.intlJur];
+    // Excel B6: =0.37 - IF(HK, 0.16, 0) - IF(SG, 0.24, 0)
+    fedOrd  = FED.ord  - j.ord;
+    // Excel B7: =0.20 - IF(HK, 0.00, 0) - IF(SG, 0.00, 0)
+    fedCg   = FED.cg   - j.cg;
+    // Excel B8: =0.21 - IF(HK, 0.165, 0) - IF(SG, 0.17, 0)
+    fedCorp = FED.corp - j.corp;
+    // Excel B9/B10/B11: XLOOKUP returns foreign rates as "state" component
+    stateOrd  = j.ord;
+    stateCg   = j.cg;
+    stateCorp = j.corp;
+  } else {
+    fedOrd = FED.ord; fedCg = FED.cg; fedCorp = FED.corp;
+    stateOrd = parseFloat(document.getElementById('stateOrd').value) || 0;
+    stateCg = parseFloat(document.getElementById('stateCg').value) || 0;
+    stateCorp = parseFloat(document.getElementById('stateCorp').value) || 0;
+  }
+
+  // Check allocation total
+  const allocTotal = allocs.reduce((a, b) => a + b, 0);
+  const totalEl = document.getElementById('allocTotal');
+  totalEl.textContent = `Total: ${(allocTotal * 100).toFixed(1)}%`;
+  totalEl.className = 'alloc-total ' + (Math.abs(allocTotal - 1.0) < 0.001 ? 'ok' : 'err');
+  if (Math.abs(allocTotal - 1.0) > 0.001) return; // Don't recalc if allocs don't sum to 100
+
+  // Compute per-asset results for all years
+  const ptResults = [], ccResults = [];
+  for (let i = 0; i < ASSET_CLASSES.length; i++) {
+    if (allocs[i] === 0) {
+      ptResults.push({ liqValue: 0, yearlyLiq: Array(horizon).fill(0), initial: 0 });
+      ccResults.push({ liqValue: 0, yearlyLiq: Array(horizon).fill(0), initial: 0 });
+      continue;
+    }
+    ptResults.push(calcPassThrough(i, capital, allocs[i], incomes[i], growths[i], horizon, fedOrd, fedCg, stateOrd, stateCg));
+    ccResults.push(calcCCorp(i, capital, allocs[i], incomes[i], growths[i], horizon, fedOrd, fedCg, fedCorp, stateOrd, stateCg, stateCorp));
+  }
+
+  // Portfolio totals by year
+  const ptYearly = Array(horizon).fill(0);
+  const ccYearly = Array(horizon).fill(0);
+  for (let i = 0; i < ASSET_CLASSES.length; i++) {
+    for (let y = 0; y < horizon; y++) {
+      ptYearly[y] += ptResults[i].yearlyLiq[y];
+      ccYearly[y] += ccResults[i].yearlyLiq[y];
+    }
+  }
+
+  const ptTotal = ptYearly[horizon - 1];
+  const ccTotal = ccYearly[horizon - 1];
+  const diff = ptTotal - ccTotal;
+  const winner = Math.abs(diff) < 1000 ? 'tie' : diff > 0 ? 'pt' : 'cc';
+
+  // Update summary cards
+  document.getElementById('ptTotalVal').textContent = fmt(ptTotal);
+  document.getElementById('ccTotalVal').textContent = fmt(ccTotal);
+  document.getElementById('ptTotalSub').textContent = `${fmtPct(annualizedReturn(ptTotal, capital, horizon))} annualized`;
+  document.getElementById('ccTotalSub').textContent = `${fmtPct(annualizedReturn(ccTotal, capital, horizon))} annualized`;
+  document.getElementById('advantageVal').textContent = (diff >= 0 ? '+' : '') + fmt(diff);
+  document.getElementById('advantageSub').textContent = winner === 'tie' ? 'Structures equivalent' : (winner === 'pt' ? 'Pass-Through leads' : 'C-Corp leads');
+
+  const banner = document.getElementById('winnerBanner');
+  const bannerText = document.getElementById('winnerText');
+  banner.className = 'winner-banner ' + winner;
+  if (winner === 'tie') {
+    banner.querySelector('.winner-icon').textContent = '⚖️';
+    bannerText.textContent = 'Structures produce equivalent after-tax wealth at this horizon.';
+  } else if (winner === 'pt') {
+    banner.querySelector('.winner-icon').textContent = '✓';
+    bannerText.textContent = `Pass-Through / Personal wins by ${fmt(diff)} (${fmtPct(diff/capital)} of initial capital) over ${horizon} years.`;
+  } else {
+    banner.querySelector('.winner-icon').textContent = '✓';
+    bannerText.textContent = `C-Corporation wins by ${fmt(-diff)} (${fmtPct(-diff/capital)} of initial capital) over ${horizon} years.`;
+  }
+
+  // Detail table
+  const tbody = document.getElementById('detailTableBody');
+  tbody.innerHTML = '';
+  let ptSum = 0, ccSum = 0, initSum = 0;
+  for (let i = 0; i < ASSET_CLASSES.length; i++) {
+    if (allocs[i] === 0) continue;
+    const pt = ptResults[i], cc = ccResults[i];
+    const d = pt.liqValue - cc.liqValue;
+    const ptAnn = annualizedReturn(pt.liqValue, pt.initial, horizon);
+    const ccAnn = annualizedReturn(cc.liqValue, cc.initial, horizon);
+    const w = Math.abs(d) < 100 ? '—' : d > 0 ? '<span style="color:var(--pt-color)">PT</span>' : '<span style="color:var(--cc-color)">CC</span>';
+    tbody.innerHTML += `<tr>
+      <td>${ASSET_CLASSES[i].name}</td>
+      <td>${fmt(pt.initial)}</td>
+      <td class="val-pt">${fmt(pt.liqValue)}</td>
+      <td class="val-cc">${fmt(cc.liqValue)}</td>
+      <td class="val-pt">${fmtPct(ptAnn)}</td>
+      <td class="val-cc">${fmtPct(ccAnn)}</td>
+      <td class="${d >= 0 ? 'val-pos' : 'val-neg'}">${(d >= 0 ? '+' : '') + fmt(d)}</td>
+      <td>${w}</td>
+    </tr>`;
+    ptSum += pt.liqValue; ccSum += cc.liqValue; initSum += pt.initial;
+  }
+  const totPtAnn = annualizedReturn(ptSum, initSum, horizon);
+  const totCcAnn = annualizedReturn(ccSum, initSum, horizon);
+  const totD = ptSum - ccSum;
+  tbody.innerHTML += `<tr>
+    <td><strong>Portfolio Total</strong></td>
+    <td><strong>${fmt(initSum)}</strong></td>
+    <td class="val-pt val-winner">${fmt(ptSum)}</td>
+    <td class="val-cc val-winner">${fmt(ccSum)}</td>
+    <td class="val-pt val-winner">${fmtPct(totPtAnn)}</td>
+    <td class="val-cc val-winner">${fmtPct(totCcAnn)}</td>
+    <td class="${totD >= 0 ? 'val-pos' : 'val-neg'} val-winner">${(totD >= 0 ? '+' : '') + fmt(totD)}</td>
+    <td>${winner === 'tie' ? '—' : winner === 'pt' ? '<span style="color:var(--pt-color)">PT</span>' : '<span style="color:var(--cc-color)">CC</span>'}</td>
+  </tr>`;
+
+  // Return matrix
+  const rmBody = document.getElementById('returnMatrixBody');
+  rmBody.innerHTML = '';
+  for (let i = 0; i < ASSET_CLASSES.length; i++) {
+    if (allocs[i] === 0) continue;
+    const pt = ptResults[i], cc = ccResults[i];
+    const preTax = incomes[i] + growths[i];
+    const ptAnn = annualizedReturn(pt.liqValue, pt.initial, horizon);
+    const ccAnn = annualizedReturn(cc.liqValue, cc.initial, horizon);
+    const ptDrag = preTax - ptAnn;
+    const ccDrag = preTax - ccAnn;
+    rmBody.innerHTML += `<tr>
+      <td>${ASSET_CLASSES[i].name}</td>
+      <td>${fmtPct(preTax)}</td>
+      <td class="val-pt">${fmtPct(ptAnn)}</td>
+      <td class="val-cc">${fmtPct(ccAnn)}</td>
+      <td style="color:var(--red)">${fmtPct(ptDrag)}</td>
+      <td style="color:var(--red)">${fmtPct(ccDrag)}</td>
+    </tr>`;
+  }
+
+  // Charts
+  updateCharts(ptYearly, ccYearly, horizon);
+
+  // Validation (only run on default scenario)
+  updateValidation(ptResults, ccResults);
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function updateCharts(ptYearly, ccYearly, horizon) {
+  const labels = Array.from({ length: horizon }, (_, i) => `Y${i + 1}`);
+  const diffData = ptYearly.map((v, i) => v - ccYearly[i]);
+
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { family: 'DM Mono', size: 11 }, boxWidth: 10 } },
+      tooltip: {
+        backgroundColor: '#1c2030',
+        borderColor: '#252b3b',
+        borderWidth: 1,
+        titleColor: '#94a3b8',
+        bodyColor: '#e2e8f0',
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#64748b', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 }, grid: { color: '#1c2030' } },
+      y: { ticks: { color: '#64748b', font: { family: 'DM Mono', size: 10 }, callback: v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K') }, grid: { color: '#252b3b' } }
+    }
+  };
+
+  if (wealthChart) wealthChart.destroy();
+  wealthChart = new Chart(document.getElementById('wealthChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pass-Through', data: ptYearly, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.05)', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'C-Corp', data: ccYearly, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.05)', borderWidth: 2, pointRadius: 0, tension: 0.3 }
+      ]
+    },
+    options: { ...chartDefaults }
+  });
+
+  if (diffChart) diffChart.destroy();
+  diffChart = new Chart(document.getElementById('diffChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'PT − CC Advantage',
+        data: diffData,
+        backgroundColor: diffData.map(v => v >= 0 ? 'rgba(74,222,128,0.5)' : 'rgba(96,165,250,0.5)'),
+        borderColor: diffData.map(v => v >= 0 ? '#4ade80' : '#60a5fa'),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+// ============================================================
+// VALIDATION TABLE
+// Source: Excel Output sheet values for TX, $10M, 30yr, default assumptions
+// ============================================================
+const EXCEL_BASELINE = {
+  "Real-Estate (Growth)": { pt: 6645865.312, cc: 5834039.7 },
+  "Real-Estate (Income)": { pt: 6357530.257, cc: 6700358.627 },
+  "Public Equities":      { pt: 17285589.81, cc: 14521484.59 },
+  "Private Equities":     { pt: 21239282.72, cc: 17094033.35 },  // Note: Excel shows 17094033.35 for CC PE (col AY30)
+  "Federal Bonds":        { pt: 3803366.95,  cc: 4136330.866 },
+  "Munis":                { pt: 3640893.707, cc: 2723049.825 },
+};
+
+function updateValidation(ptResults, ccResults) {
+  const rows = document.getElementById('validationRows');
+  rows.innerHTML = '';
+  for (let i = 0; i < ASSET_CLASSES.length; i++) {
+    const name = ASSET_CLASSES[i].name;
+    const excel = EXCEL_BASELINE[name];
+    if (!excel) continue;
+    const toolPt = ptResults[i].liqValue;
+    const toolCc = ccResults[i].liqValue;
+    const ptDiff = Math.abs(toolPt - excel.pt) / excel.pt;
+    const ccDiff = Math.abs(toolCc - excel.cc) / excel.cc;
+    const ptClass = ptDiff < 0.001 ? 'val-match' : ptDiff < 0.01 ? 'val-close' : 'val-neg';
+    const ccClass = ccDiff < 0.001 ? 'val-match' : ccDiff < 0.01 ? 'val-close' : 'val-neg';
+    rows.innerHTML += `<div class="validation-row">
+      <span style="color:var(--neutral)">${name}</span>
+      <span>${fmt(excel.pt)}</span>
+      <span class="${ptClass}">${fmt(toolPt)} <span style="font-size:9px;opacity:0.6">${ptDiff < 0.0001 ? '✓ exact' : (ptDiff*100).toFixed(3)+'%'}</span></span>
+      <span>${fmt(excel.cc)}</span>
+      <span class="${ccClass}">${fmt(toolCc)} <span style="font-size:9px;opacity:0.6">${ccDiff < 0.0001 ? '✓ exact' : (ccDiff*100).toFixed(3)+'%'}</span></span>
+    </div>`;
+  }
+}
+
+// ============================================================
+// UI BUILDERS
+// ============================================================
+function buildStateDropdown() {
+  const el = document.getElementById('stateSelect');
+  const states = [
+    ["TX","Texas (No income tax)"],["CA","California"],["NY","New York"],
+    ["FL","Florida (No income tax)"],["IL","Illinois"],["NJ","New Jersey"],
+    ["WA","Washington"],["MA","Massachusetts"],["OR","Oregon"],["MN","Minnesota"],
+    ["CT","Connecticut"],["NV","Nevada (No tax)"],["SD","South Dakota (No tax)"],
+    ["WY","Wyoming (No tax)"],["AK","Alaska"],["AZ","Arizona"],["CO","Colorado"],
+    ["GA","Georgia"],["VA","Virginia"],["NC","North Carolina"],
+  ];
+  // Add all remaining states
+  Object.keys(STATE_DATA).forEach(abbr => {
+    if (!states.find(s => s[0] === abbr)) states.push([abbr, abbr]);
+  });
+  states.sort((a,b) => a[1].localeCompare(b[1]));
+  el.innerHTML = states.map(([abbr, name]) => `<option value="${abbr}">${name} (${abbr})</option>`).join('');
+  el.value = 'TX';
+}
+
+function onStateChange() {
+  const abbr = document.getElementById('stateSelect').value;
+  const d = STATE_DATA[abbr] || {ord:0, cg:0, corp:0};
+  document.getElementById('stateOrd').value = d.ord;
+  document.getElementById('stateCg').value = d.cg;
+  document.getElementById('stateCorp').value = d.corp;
+  recalcAll();
+}
+
+function setJurMode(mode) {
+  state.jurMode = mode;
+  document.getElementById('jurDomestic').style.display = mode === 'domestic' ? '' : 'none';
+  document.getElementById('jurIntl').style.display = mode === 'international' ? '' : 'none';
+  document.getElementById('btnDomestic').classList.toggle('active', mode === 'domestic');
+  document.getElementById('btnIntl').classList.toggle('active', mode === 'international');
+  // Show/hide state rate inputs — not relevant for international
+  // State section stays visible in international mode — shows foreign rate component
+  const stateSection = document.getElementById('stateTaxSection');
+  if (stateSection) stateSection.style.display = '';
+  updateFedDisplay();
+  recalcAll();
+}
+
+function setIntlJur(code) {
+  state.intlJur = code;
+  document.getElementById('btnHK').classList.toggle('active', code === 'HK');
+  document.getElementById('btnSG').classList.toggle('active', code === 'SG');
+  updateFedDisplay();
+  recalcAll();
+}
+
+function updateFedDisplay() {
+  if (state.jurMode === 'international' && NON_US[state.intlJur]) {
+    const j = NON_US[state.intlJur];
+    // Show the reduced federal component (Excel B6/B7/B8)
+    document.getElementById('fedOrdDisplay').textContent = ((FED.ord - j.ord)*100).toFixed(1)+'%';
+    document.getElementById('fedCgDisplay').textContent  = ((FED.cg  - j.cg )*100).toFixed(1)+'%';
+    document.getElementById('fedCorpDisplay').textContent= ((FED.corp- j.corp)*100).toFixed(1)+'%';
+    document.getElementById('fedRateLabel').textContent  = 'U.S. Federal Rates (reduced)';
+    // Also update state rate inputs to show foreign rates (Excel B9/B10/B11)
+    document.getElementById('stateOrd').value  = j.ord;
+    document.getElementById('stateCg').value   = j.cg;
+    document.getElementById('stateCorp').value = j.corp;
+  } else {
+    document.getElementById('fedOrdDisplay').textContent = '37.0%';
+    document.getElementById('fedCgDisplay').textContent  = '20.0%';
+    document.getElementById('fedCorpDisplay').textContent= '21.0%';
+    document.getElementById('fedRateLabel').textContent  = 'Federal Tax Rates';
+  }
+}
+
+function buildAllocRows() {
+  const container = document.getElementById('allocRows');
+  container.innerHTML = '';
+  ASSET_CLASSES.forEach((asset, i) => {
+    container.innerHTML += `
+      <div class="alloc-row">
+        <span class="alloc-name">${asset.name}</span>
+        <input type="number" class="alloc-input" id="alloc_${i}" value="${(state.allocs[i]*100).toFixed(1)}"
+          min="0" max="100" step="1" oninput="updateAlloc(${i}, this.value)">
+        <span class="alloc-input" id="allocVal_${i}" style="background:transparent;border-color:transparent;color:var(--text-dim);font-size:11px;text-align:right;padding:4px 2px;">
+          ${fmt(state.capital * state.allocs[i])}
+        </span>
+      </div>`;
+  });
+}
+
+function buildReturnRows() {
+  const container = document.getElementById('returnRows');
+  container.innerHTML = '';
+  ASSET_CLASSES.forEach((asset, i) => {
+    container.innerHTML += `
+      <div class="return-grid" style="margin-bottom:8px;">
+        <span class="return-name">${asset.name}</span>
+        <input type="number" class="alloc-input" id="inc_${i}" value="${(state.incomes[i]*100).toFixed(1)}"
+          min="0" max="30" step="0.1" oninput="updateReturn(${i}, 'income', this.value)">
+        <input type="number" class="alloc-input" id="grw_${i}" value="${(state.growths[i]*100).toFixed(1)}"
+          min="0" max="30" step="0.1" oninput="updateReturn(${i}, 'growth', this.value)">
+      </div>`;
+  });
+}
+
+function updateAlloc(i, val) {
+  state.allocs[i] = parseFloat(val) / 100 || 0;
+  const v = document.getElementById('allocVal_' + i);
+  if (v) v.textContent = fmt(state.capital * state.allocs[i]);
+  recalcAll();
+}
+
+function updateReturn(i, type, val) {
+  const v = parseFloat(val) / 100 || 0;
+  if (type === 'income') state.incomes[i] = v;
+  else state.growths[i] = v;
+  recalcAll();
+}
+
+function updateCapital() {
+  state.capital = parseInt(document.getElementById('capitalSlider').value);
+  document.getElementById('capitalVal').textContent = fmt(state.capital);
+  // Update alloc value displays
+  ASSET_CLASSES.forEach((_, i) => {
+    const v = document.getElementById('allocVal_' + i);
+    if (v) v.textContent = fmt(state.capital * state.allocs[i]);
+  });
+  recalcAll();
+}
+
+function updateHorizon() {
+  state.horizon = parseInt(document.getElementById('horizonSlider').value);
+  document.getElementById('horizonVal').textContent = state.horizon + ' years';
+  recalcAll();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// Formatters
+function fmt(n) {
+  if (isNaN(n) || n === null) return '—';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+function fmtPct(n) {
+  if (isNaN(n)) return '—';
+  return (n * 100).toFixed(2) + '%';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  buildStateDropdown();
+  buildAllocRows();
+  buildReturnRows();
+  recalcAll();
+}
+
+init();
+</script>
+</body>
+</html>
